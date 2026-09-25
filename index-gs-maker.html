@@ -1,0 +1,1376 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Локальный конструктор дипломов: создание одного диплома или комплекта для списка учеников">
+  <meta name="theme-color" content="#0d1a30">
+  <title>GS Maker — конструктор дипломов</title>
+  <style>
+    :root {
+      --ink: #0d1a30;
+      --ink-2: #182846;
+      --paper: #fffdf8;
+      --canvas: #e9edf3;
+      --gold: #c78e2d;
+      --gold-soft: #f6ead0;
+      --line: #dce2ea;
+      --muted: #647087;
+      --white: #fff;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: var(--canvas);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body { min-width: 320px; }
+    button, input, textarea, select { font: inherit; }
+    button, label.upload-button, .dropzone { cursor: pointer; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+      outline: 3px solid rgba(199,142,45,.35);
+      outline-offset: 2px;
+    }
+    .hidden { display: none !important; }
+
+    .topbar {
+      min-height: 64px;
+      padding: 10px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      color: white;
+      background: var(--ink);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      font: 1.2rem Georgia, serif;
+    }
+    .brand-mark {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255,255,255,.35);
+      border-radius: 9px;
+      color: #f2c86f;
+      font: 700 .9rem Arial, sans-serif;
+    }
+    .topbar-actions { display: flex; align-items: center; gap: 20px; }
+    .clear-button {
+      border: 0;
+      padding: 7px;
+      color: #cbd5e5;
+      background: transparent;
+      cursor: pointer;
+    }
+    .privacy-pill { color: #cbd5e5; font-size: .82rem; }
+    .privacy-pill span { color: #48c78e; }
+
+    .workspace {
+      min-height: calc(100vh - 64px);
+      display: grid;
+      grid-template-columns: minmax(360px, 455px) minmax(0, 1fr);
+    }
+    .editor {
+      padding: 26px 30px 32px;
+      overflow-y: auto;
+      background: var(--white);
+      border-right: 1px solid var(--line);
+    }
+    .eyebrow {
+      margin: 0 0 7px;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: .14em;
+      font-weight: 750;
+      font-size: .72rem;
+    }
+    h1 { margin: 0; font: 600 2rem/1.12 Georgia, serif; }
+    .editor-heading > p:last-child {
+      margin: 9px 0 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      margin: 24px 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .step {
+      padding: 10px 5px;
+      border: 0;
+      color: var(--muted);
+      background: #f8f9fb;
+      font-size: .78rem;
+      cursor: pointer;
+    }
+    .step + .step { border-left: 1px solid var(--line); }
+    .step span {
+      display: inline-grid;
+      place-items: center;
+      width: 20px;
+      height: 20px;
+      margin-right: 4px;
+      border-radius: 50%;
+      background: #e9edf2;
+      font-size: .68rem;
+    }
+    .step.active { color: var(--ink); background: var(--gold-soft); font-weight: 700; }
+    .step.active span { color: white; background: var(--ink); }
+
+    .panel-section { padding: 19px 0 22px; border-top: 1px solid var(--line); }
+    .panel-section.first { border-top: 0; }
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .section-title > div { display: flex; align-items: center; gap: 10px; }
+    .section-title h2 { margin: 0; font-size: .95rem; }
+    .section-number { color: var(--gold); font: 700 .7rem Georgia, serif; }
+    .text-button, .mini-link {
+      border: 0;
+      padding: 5px;
+      color: #38517a;
+      background: transparent;
+      font-size: .76rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .text-button:hover, .mini-link:hover { color: var(--gold); }
+
+    .template-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .template-card {
+      min-width: 0;
+      padding: 6px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--ink);
+      background: white;
+      text-align: left;
+      font-size: .68rem;
+      cursor: pointer;
+    }
+    .template-card.selected { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(199,142,45,.12); }
+    .template-thumb {
+      position: relative;
+      display: block;
+      height: 48px;
+      margin-bottom: 7px;
+      overflow: hidden;
+      border-radius: 6px;
+      background: #f7f2e5;
+    }
+    .template-thumb::before, .template-thumb::after {
+      position: absolute;
+      inset: 6px;
+      border: 2px solid #c69743;
+      content: "";
+    }
+    .template-thumb::after { inset: 10px; border-width: 1px; }
+    .template-thumb i {
+      position: absolute;
+      z-index: 1;
+      top: 21px;
+      left: 25%;
+      width: 50%;
+      height: 3px;
+      background: #22365a;
+    }
+    .template-thumb.bright { background: #fff5ef; }
+    .template-thumb.bright::before { border: 0; background: linear-gradient(135deg,#ef6d4f 0 16%,transparent 16%),linear-gradient(315deg,#305bb5 0 16%,transparent 16%); }
+    .template-thumb.nature { background: #f2f7ef; }
+    .template-thumb.nature::before { border-color: #5f8562; border-radius: 50% 12px; }
+    .template-thumb.space { background: #15284d; }
+    .template-thumb.space::before { border-color: #dcb653; border-radius: 50%; }
+    .template-thumb.space i { background: white; }
+
+    .custom-controls, .field-row, .upload-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .custom-controls { margin-top: 12px; }
+    .color-field, .select-field {
+      min-height: 43px;
+      padding: 5px 8px 5px 11px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      border: 1px solid #d1d8e2;
+      border-radius: 9px;
+      color: #465267;
+      font-size: .75rem;
+      font-weight: 650;
+    }
+    .color-field input { width: 34px; height: 30px; border: 0; padding: 0; background: transparent; }
+    .select-field select { min-width: 0; border: 0; padding: 5px; color: var(--ink); background: transparent; }
+
+    .upload-button {
+      min-height: 42px;
+      display: grid;
+      place-items: center;
+      border: 1px dashed #aab5c5;
+      border-radius: 9px;
+      color: #3d506f;
+      background: #fafbfd;
+      font-size: .77rem;
+      font-weight: 700;
+    }
+    .upload-button input, .dropzone input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+    }
+    .hint { margin: 8px 0 0; color: var(--muted); font-size: .72rem; line-height: 1.45; }
+
+    .field {
+      display: grid;
+      gap: 7px;
+      margin-top: 13px;
+      color: #38455a;
+      font-size: .86rem;
+      font-weight: 650;
+    }
+    .field small { color: #8a94a6; font-weight: 500; }
+    .field input, .field textarea {
+      width: 100%;
+      border: 1px solid #cfd6e1;
+      border-radius: 9px;
+      padding: 10px 12px;
+      color: var(--ink);
+      background: #fbfcfd;
+      resize: vertical;
+      line-height: 1.45;
+    }
+    .field input[type="color"] { height: 43px; padding: 5px; }
+    .secondary-button, .next-button {
+      min-height: 44px;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .secondary-button { border: 1px solid #cdd5e1; color: var(--ink); background: white; }
+    .next-button {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 4px;
+      border: 1px solid var(--ink);
+      color: white;
+      background: var(--ink);
+    }
+    .full { width: 100%; }
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 4px 0;
+      color: #8b96a7;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-size: .65rem;
+    }
+    .divider::before, .divider::after { height: 1px; flex: 1; background: var(--line); content: ""; }
+
+    .dropzone {
+      min-height: 110px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border: 1.5px dashed #aab6c6;
+      border-radius: 12px;
+      color: #344966;
+      background: #fafbfd;
+      text-align: center;
+    }
+    .dropzone.dragging { border-color: var(--gold); background: #fffcf5; }
+    .dropzone strong { margin-top: 5px; font-size: .82rem; }
+    .dropzone small { margin-top: 4px; color: #8b95a5; font-size: .7rem; }
+    .drop-icon {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: #94681f;
+      background: var(--gold-soft);
+    }
+    .list-result { margin-top: 14px; padding: 12px; border: 1px solid #d7dfd8; border-radius: 10px; background: #f8fbf8; }
+    .list-result-head { display: flex; justify-content: space-between; gap: 8px; }
+    .list-result-head span { color: var(--muted); font-size: .7rem; }
+    .student-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+    .student-chip {
+      max-width: 100%;
+      padding: 5px 8px;
+      overflow: hidden;
+      border: 1px solid #dbe1e8;
+      border-radius: 6px;
+      color: #35435a;
+      background: white;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: .7rem;
+    }
+
+    .export-summary { display: flex; align-items: center; gap: 14px; }
+    .summary-icon {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: #176e47;
+      background: #dff3e8;
+      font-weight: 900;
+    }
+    .export-summary p, .export-summary strong, .export-summary small { display: block; margin: 0; }
+    .export-summary p { color: #6d788b; font-size: .75rem; }
+    .export-summary strong { margin-top: 3px; font: 600 1.2rem Georgia, serif; }
+    .export-summary small { margin-top: 3px; color: #7f8999; }
+    .export-card {
+      width: 100%;
+      min-height: 65px;
+      margin: 8px 0;
+      padding: 9px 12px;
+      display: grid;
+      grid-template-columns: 43px 1fr 20px;
+      align-items: center;
+      gap: 11px;
+      border: 1px solid #d6dde7;
+      border-radius: 11px;
+      color: var(--ink);
+      background: white;
+      text-align: left;
+      cursor: pointer;
+    }
+    .format-icon {
+      width: 43px;
+      height: 43px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      color: #2c5c9b;
+      background: #e9f1fb;
+      font-size: .7rem;
+      font-weight: 900;
+    }
+    .format-icon.pdf { color: #a44d40; background: #f9e9e6; }
+    .format-icon.zip { color: #7f6126; background: #f7edd7; }
+    .export-card strong, .export-card small { display: block; }
+    .export-card small { margin-top: 4px; color: #778296; font-size: .69rem; }
+    .privacy-card {
+      margin: 14px 0;
+      padding: 13px;
+      border-radius: 10px;
+      color: #526078;
+      background: #f0f5f3;
+      font-size: .75rem;
+      line-height: 1.5;
+    }
+    .privacy-card strong { color: #30453d; }
+
+    .preview-area {
+      min-width: 0;
+      min-height: calc(100vh - 64px);
+      display: grid;
+      grid-template-rows: auto minmax(360px, 1fr) auto;
+      background: var(--canvas);
+    }
+    .preview-toolbar {
+      min-height: 64px;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      border-bottom: 1px solid #d5dbe4;
+    }
+    .toolbar-title { display: flex; align-items: baseline; gap: 12px; }
+    .toolbar-title span { color: var(--muted); font-size: .75rem; }
+    .preview-nav { display: flex; gap: 4px; }
+    .preview-nav button, .zoom-controls button {
+      min-width: 34px;
+      min-height: 32px;
+      border: 1px solid #ccd4df;
+      color: #33445e;
+      background: rgba(255,255,255,.7);
+      cursor: pointer;
+    }
+    .zoom-controls {
+      justify-self: end;
+      display: flex;
+      align-items: center;
+      border: 1px solid #ced5df;
+      border-radius: 9px;
+      overflow: hidden;
+      background: rgba(255,255,255,.7);
+    }
+    .zoom-controls button { border: 0; }
+    .zoom-controls span { width: 48px; text-align: center; font-size: .75rem; }
+    .canvas-stage {
+      min-height: 0;
+      padding: 28px;
+      display: grid;
+      place-items: center;
+      overflow: auto;
+      background-image: radial-gradient(#c9d0da .7px, transparent .7px);
+      background-size: 13px 13px;
+    }
+    #diplomaCanvas {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      background: white;
+      box-shadow: 0 16px 45px rgba(25,36,56,.2);
+    }
+    .local-note {
+      padding: 12px 20px;
+      color: #687488;
+      background: rgba(255,255,255,.65);
+      border-top: 1px solid #d5dbe4;
+      font-size: .75rem;
+      line-height: 1.45;
+    }
+    .local-note strong { color: #344159; }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(9,18,34,.65);
+    }
+    .overlay-box {
+      width: min(340px, 100%);
+      padding: 23px;
+      border-radius: 14px;
+      background: white;
+      box-shadow: 0 20px 50px rgba(0,0,0,.25);
+    }
+    .overlay-box strong, .overlay-box span { display: block; text-align: center; }
+    .overlay-box span { margin-top: 8px; color: var(--muted); font-size: .8rem; }
+    .progress-track { height: 6px; margin-top: 16px; overflow: hidden; border-radius: 8px; background: #e9edf2; }
+    .progress-track i { display: block; width: 0; height: 100%; background: var(--gold); }
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      z-index: 20;
+      max-width: calc(100vw - 30px);
+      padding: 11px 16px;
+      transform: translate(-50%, 20px);
+      border-radius: 9px;
+      color: white;
+      background: #14243d;
+      opacity: 0;
+      pointer-events: none;
+      transition: .2s;
+      text-align: center;
+      font-size: .82rem;
+    }
+    .toast.show { transform: translate(-50%, 0); opacity: 1; }
+
+    @media (max-width: 760px) {
+      .workspace { grid-template-columns: 1fr; }
+      .editor { border-right: 0; }
+      .preview-area { min-height: 620px; }
+    }
+    @media (max-width: 560px) {
+      .topbar { padding: 10px 15px; }
+      .topbar-actions { gap: 8px; }
+      .clear-button { font-size: .72rem; }
+      .privacy-pill { display: none; }
+      .editor { padding: 21px 17px; }
+      .template-grid { grid-template-columns: repeat(2, 1fr); }
+      .field-row, .upload-row { grid-template-columns: 1fr; }
+      .preview-toolbar { padding: 0 12px; grid-template-columns: 1fr auto; }
+      .preview-nav { display: none; }
+      .canvas-stage { padding: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">GS</span><span>GS Maker — создать диплом</span></div>
+    <div class="topbar-actions">
+      <button id="clearSession" class="clear-button" type="button">Очистить данные</button>
+      <div class="privacy-pill"><span>●</span> Обработка в браузере</div>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <section class="editor" aria-label="Конструктор дипломов">
+      <div class="editor-heading">
+        <p class="eyebrow">Локальный конструктор</p>
+        <h1>Создайте дипломы</h1>
+        <p>Один диплом или комплект для списка. Данные используются в браузере для создания файлов.</p>
+      </div>
+
+      <nav class="steps" aria-label="Этапы создания">
+        <button class="step active" type="button" data-panel="design"><span>1</span> Дизайн</button>
+        <button class="step" type="button" data-panel="students"><span>2</span> Ученики</button>
+        <button class="step" type="button" data-panel="export"><span>3</span> Скачать</button>
+      </nav>
+
+      <section id="designPanel" class="tab-panel">
+        <div class="panel-section first">
+          <div class="section-title">
+            <div><span class="section-number">01</span><h2>Оформление</h2></div>
+            <button id="surpriseDesign" class="text-button" type="button">Создать вариант</button>
+          </div>
+          <div class="template-grid" role="radiogroup" aria-label="Стиль диплома">
+            <button class="template-card selected" type="button" data-theme="classic" aria-checked="true"><span class="template-thumb classic"><i></i></span>Академический</button>
+            <button class="template-card" type="button" data-theme="bright" aria-checked="false"><span class="template-thumb bright"><i></i></span>Яркий</button>
+            <button class="template-card" type="button" data-theme="nature" aria-checked="false"><span class="template-thumb nature"><i></i></span>Эко</button>
+            <button class="template-card" type="button" data-theme="space" aria-checked="false"><span class="template-thumb space"><i></i></span>Космос</button>
+          </div>
+          <div class="custom-controls">
+            <label class="color-field"><span>Акцент</span><input id="accentColor" type="color" value="#b9882d"></label>
+            <label class="select-field"><span>Ориентация</span>
+              <select id="orientation"><option value="landscape">Альбомная</option><option value="portrait">Книжная</option></select>
+            </label>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-title"><div><span class="section-number">02</span><h2>Фон и логотип</h2></div></div>
+          <div class="upload-row">
+            <label class="upload-button">Фон диплома<input id="backgroundUpload" type="file" accept="image/png,image/jpeg,image/webp"></label>
+            <label class="upload-button">Логотип<input id="logoUpload" type="file" accept="image/png,image/jpeg,image/webp"></label>
+          </div>
+          <p class="hint">Поддерживаются PNG, JPG и WebP. Изображения загружаются в браузере.</p>
+          <button id="removeAssets" class="mini-link hidden" type="button">Убрать загруженные изображения</button>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-title"><div><span class="section-number">03</span><h2>Текст диплома</h2></div></div>
+          <label class="field"><span>Организация</span><input id="organization" type="text" value="Лицей № 1 «Спутник»"></label>
+          <div class="field-row">
+            <label class="field"><span>Заголовок</span><input id="documentTitle" type="text" value="ДИПЛОМ"></label>
+            <label class="field"><span>Цвет текста</span><input id="textColor" type="color" value="#13233e"></label>
+          </div>
+          <label class="field"><span>Текст награждения</span><textarea id="achievement" rows="3">за I место в школьном конкурсе исследовательских проектов</textarea></label>
+          <div class="field-row">
+            <label class="field"><span>Подпись</span><input id="signature" type="text" value="Руководитель / подпись"></label>
+            <label class="field"><span>Дата</span><input id="awardDate" type="text" placeholder="20 мая 2026 г."></label>
+          </div>
+        </div>
+        <button class="next-button" type="button" data-go="students">Продолжить: добавить учеников <span>→</span></button>
+      </section>
+
+      <section id="studentsPanel" class="tab-panel hidden">
+        <div class="panel-section first">
+          <div class="section-title"><div><span class="section-number">01</span><h2>Один ученик</h2></div></div>
+          <label class="field"><span>Фамилия и имя</span><input id="studentName" type="text" value="Александрова София"></label>
+          <label class="field"><span>Класс <small>необязательно</small></span><input id="studentClass" type="text" value="4 «А» класс"></label>
+          <button id="useSingle" class="secondary-button full" type="button">Использовать одного ученика</button>
+        </div>
+
+        <div class="divider"><span>или загрузите список</span></div>
+
+        <div class="panel-section">
+          <div class="section-title">
+            <div><span class="section-number">02</span><h2>Список учеников</h2></div>
+            <button id="downloadExample" class="text-button" type="button">Пример CSV</button>
+          </div>
+          <label id="csvDrop" class="dropzone">
+            <input id="csvUpload" type="file" accept=".csv,.txt,text/csv,text/plain">
+            <span class="drop-icon">⇧</span>
+            <strong>Выберите CSV или TXT</strong>
+            <small>или перетащите сюда · до 200 учеников</small>
+          </label>
+          <label class="field"><span>Или вставьте имена <small>по одному в строке</small></span>
+            <textarea id="nameList" rows="5" placeholder="Иванова Анна; 5А; за победу в олимпиаде&#10;Петров Максим; 5А"></textarea>
+          </label>
+          <button id="applyList" class="secondary-button full" type="button">Применить список</button>
+          <div id="listResult" class="list-result hidden">
+            <div class="list-result-head"><strong id="studentCount">0 учеников</strong><span>Список для комплекта</span></div>
+            <div id="studentChips" class="student-chips"></div>
+          </div>
+        </div>
+        <button class="next-button" type="button" data-go="export">Продолжить: скачать <span>→</span></button>
+      </section>
+
+      <section id="exportPanel" class="tab-panel hidden">
+        <div class="panel-section first export-summary">
+          <span class="summary-icon">✓</span>
+          <div><p>Готово к выгрузке</p><strong id="exportCount">1 диплом</strong><small id="exportDescription">Александрова София</small></div>
+        </div>
+        <div class="panel-section">
+          <div class="section-title"><div><span class="section-number">01</span><h2>Формат</h2></div></div>
+          <button id="downloadPng" class="export-card" type="button"><span class="format-icon">PNG</span><span><strong>Изображение</strong><small>Скачать текущий диплом</small></span><span>↓</span></button>
+          <button id="downloadPdf" class="export-card" type="button"><span class="format-icon pdf">PDF</span><span><strong>PDF для печати</strong><small>Каждый диплом на отдельной странице</small></span><span>↓</span></button>
+          <button id="downloadZip" class="export-card" type="button"><span class="format-icon zip">ZIP</span><span><strong>Архив изображений</strong><small>Отдельный PNG для каждого ученика</small></span><span>↓</span></button>
+        </div>
+        <div class="privacy-card"><strong>Обработка в браузере.</strong><br>Не вводите данные, если у вас нет права использовать их для подготовки дипломов. Согласие на обработку следует проверять по правилам конкретного конкурса.</div>
+        <button class="secondary-button full" type="button" data-go="students">← Вернуться к списку</button>
+      </section>
+    </section>
+
+    <section class="preview-area" aria-label="Предпросмотр диплома">
+      <div class="preview-toolbar">
+        <div class="toolbar-title"><strong>Предпросмотр</strong><span id="pageCounter">1 из 1</span></div>
+        <div class="preview-nav">
+          <button id="previousStudent" type="button" aria-label="Предыдущий ученик">‹</button>
+          <button id="nextStudent" type="button" aria-label="Следующий ученик">›</button>
+        </div>
+        <div class="zoom-controls">
+          <button id="zoomOut" type="button" aria-label="Уменьшить">−</button>
+          <span id="zoomLabel">72%</span>
+          <button id="zoomIn" type="button" aria-label="Увеличить">+</button>
+        </div>
+      </div>
+      <div class="canvas-stage"><canvas id="diplomaCanvas" width="1123" height="794"></canvas></div>
+      <div class="local-note"><strong>Важно:</strong> данные используются в браузере для создания дипломов. При открытии опубликованного сайта сама страница загружается с хостинга; для полностью автономной работы сохраните HTML-файл на устройство.</div>
+    </section>
+  </main>
+
+  <div id="progressOverlay" class="overlay hidden" role="status" aria-live="polite">
+    <div class="overlay-box">
+      <strong id="progressTitle">Готовим файлы…</strong>
+      <span id="progressText">0 из 0</span>
+      <div class="progress-track"><i id="progressBar"></i></div>
+    </div>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+  (() => {
+    'use strict';
+
+    const $ = (s) => document.querySelector(s);
+    const $$ = (s) => [...document.querySelectorAll(s)];
+    const canvas = $('#diplomaCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const fields = {
+      organization: $('#organization'),
+      title: $('#documentTitle'),
+      achievement: $('#achievement'),
+      signature: $('#signature'),
+      date: $('#awardDate'),
+      name: $('#studentName'),
+      className: $('#studentClass'),
+      accent: $('#accentColor'),
+      textColor: $('#textColor'),
+      orientation: $('#orientation')
+    };
+
+    const defaults = {
+      organization: 'Лицей № 1 «Спутник»',
+      title: 'ДИПЛОМ',
+      achievement: 'за I место в школьном конкурсе исследовательских проектов',
+      signature: 'Руководитель / подпись',
+      date: '',
+      name: 'Александрова София',
+      className: '4 «А» класс',
+      accent: '#b9882d',
+      textColor: '#13233e',
+      orientation: 'landscape'
+    };
+
+    let state = {
+      theme: 'classic',
+      zoom: 72,
+      students: [{ name: defaults.name, className: defaults.className, achievement: '' }],
+      currentIndex: 0,
+      background: null,
+      logo: null
+    };
+    let toastTimer;
+
+    function toast(message) {
+      const el = $('#toast');
+      el.textContent = message;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+    }
+
+    function plural(count, one, few, many) {
+      const n10 = count % 10, n100 = count % 100;
+      if (n10 === 1 && n100 !== 11) return `${count} ${one}`;
+      if (n10 >= 2 && n10 <= 4 && (n100 < 12 || n100 > 14)) return `${count} ${few}`;
+      return `${count} ${many}`;
+    }
+
+    function currentRecord() {
+      return state.students[state.currentIndex] || {
+        name: fields.name.value.trim(),
+        className: fields.className.value.trim(),
+        achievement: ''
+      };
+    }
+
+    function safeFileName(value) {
+      return (String(value || 'Диплом')
+        .replace(/[<>:"/\\|?*\x00-\x1F]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim() || 'Диплом').slice(0, 90);
+    }
+
+    function fitText(text, maxWidth, startSize, minSize, family, weight) {
+      let size = startSize;
+      while (size > minSize) {
+        ctx.font = `${weight} ${size}px ${family}`;
+        if (ctx.measureText(text).width <= maxWidth) return size;
+        size -= 2;
+      }
+      return minSize;
+    }
+
+    function wrapText(text, maxWidth, maxLines) {
+      const words = String(text || '').trim().split(/\s+/).filter(Boolean);
+      const lines = [];
+      let line = '';
+      for (const word of words) {
+        const candidate = line ? `${line} ${word}` : word;
+        if (ctx.measureText(candidate).width > maxWidth && line) {
+          lines.push(line);
+          line = word;
+        } else line = candidate;
+      }
+      if (line) lines.push(line);
+      if (lines.length > maxLines) {
+        const visible = lines.slice(0, maxLines);
+        visible[maxLines - 1] += '…';
+        return visible;
+      }
+      return lines;
+    }
+
+    function rgba(hex, alpha) {
+      const raw = hex.replace('#', '');
+      const full = raw.length === 3 ? raw.split('').map(x => x + x).join('') : raw;
+      const n = parseInt(full, 16);
+      return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
+    }
+
+    function drawCover(image, x, y, w, h) {
+      const scale = Math.max(w / image.width, h / image.height);
+      const dw = image.width * scale, dh = image.height * scale;
+      ctx.drawImage(image, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+    }
+
+    function decoration(w, h, accent) {
+      if (state.theme === 'bright') {
+        ctx.fillStyle = accent;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(w * .22, 0); ctx.lineTo(0, h * .27); ctx.fill();
+        ctx.fillStyle = '#315eae';
+        ctx.beginPath(); ctx.moveTo(w, h); ctx.lineTo(w * .78, h); ctx.lineTo(w, h * .73); ctx.fill();
+        ctx.strokeStyle = accent; ctx.lineWidth = 5;
+        ctx.strokeRect(w * .035, h * .045, w * .93, h * .91);
+      } else if (state.theme === 'nature') {
+        ctx.strokeStyle = accent; ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.ellipse(w / 2, h / 2, w * .45, h * .43, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = rgba(accent, .4); ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(w / 2, h / 2, w * .43, h * .40, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (state.theme === 'space') {
+        const gradient = ctx.createLinearGradient(0, 0, w, h);
+        gradient.addColorStop(0, '#0c1835');
+        gradient.addColorStop(1, '#213b6e');
+        ctx.fillStyle = gradient; ctx.fillRect(0, 0, w, h);
+        for (let i = 0; i < 45; i++) {
+          const x = ((i * 83) % 977) / 977 * w;
+          const y = ((i * 127) % 719) / 719 * h;
+          ctx.fillStyle = i % 5 === 0 ? accent : 'rgba(255,255,255,.7)';
+          ctx.beginPath(); ctx.arc(x, y, i % 7 === 0 ? 2.2 : 1.1, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.strokeStyle = accent; ctx.lineWidth = 4;
+        ctx.strokeRect(w * .04, h * .05, w * .92, h * .90);
+      } else {
+        ctx.strokeStyle = accent; ctx.lineWidth = 6;
+        ctx.strokeRect(w * .027, h * .038, w * .946, h * .924);
+        ctx.strokeStyle = rgba(accent, .42); ctx.lineWidth = 2;
+        ctx.strokeRect(w * .041, h * .057, w * .918, h * .886);
+      }
+    }
+
+    function drawDiploma(record = currentRecord()) {
+      const portrait = fields.orientation.value === 'portrait';
+      const w = portrait ? 794 : 1123;
+      const h = portrait ? 1123 : 794;
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+
+      const accent = fields.accent.value;
+      const dark = state.theme === 'space' && !state.background;
+      const textColor = dark ? '#f7f4e8' : fields.textColor.value;
+
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = state.theme === 'nature' ? '#fafcf7' : '#fffdf8';
+      ctx.fillRect(0, 0, w, h);
+
+      if (state.background) drawCover(state.background, 0, 0, w, h);
+      else decoration(w, h, accent);
+
+      if (state.background) {
+        ctx.fillStyle = 'rgba(255,255,255,.84)';
+        ctx.fillRect(w * .12, h * .1, w * .76, h * .68);
+      }
+
+      const center = w / 2;
+      const orgY = h * (portrait ? .15 : .145);
+      const titleY = h * (portrait ? .28 : .30);
+      const labelY = h * (portrait ? .36 : .39);
+      const nameY = h * (portrait ? .45 : .505);
+      const classY = h * (portrait ? .50 : .555);
+      const awardY = h * (portrait ? .56 : .62);
+      const footerY = h * .84;
+      const contentWidth = w * (portrait ? .77 : .68);
+
+      if (state.logo) {
+        const scale = Math.min(w * .12 / state.logo.width, h * .09 / state.logo.height, 1);
+        ctx.drawImage(state.logo, center - state.logo.width * scale / 2, h * .045,
+          state.logo.width * scale, state.logo.height * scale);
+      }
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = accent;
+      ctx.font = `700 ${Math.max(17, w * .019)}px Arial`;
+      ctx.fillText((fields.organization.value.trim() || 'ОРГАНИЗАЦИЯ').toUpperCase(), center, orgY);
+
+      ctx.fillStyle = textColor;
+      const title = fields.title.value.trim() || 'ДИПЛОМ';
+      const titleSize = fitText(title, contentWidth, w * (portrait ? .084 : .072), w * .045, 'Georgia, serif', 700);
+      ctx.font = `700 ${titleSize}px Georgia, serif`;
+      ctx.fillText(title, center, titleY);
+
+      ctx.fillStyle = accent;
+      ctx.fillRect(center - w * .078, titleY + h * .035, w * .156, Math.max(2, h * .004));
+
+      ctx.fillStyle = textColor;
+      ctx.font = `400 ${Math.max(20, w * .021)}px Georgia, serif`;
+      ctx.fillText('награждается', center, labelY);
+
+      const name = record.name || 'Имя участника';
+      const nameSize = fitText(name, contentWidth, w * (portrait ? .065 : .05), w * .032, 'Georgia, serif', 600);
+      ctx.font = `600 ${nameSize}px Georgia, serif`;
+      ctx.fillText(name, center, nameY);
+
+      if (record.className) {
+        ctx.fillStyle = dark ? '#cbd7ef' : '#687489';
+        ctx.font = `500 ${Math.max(17, w * .018)}px Arial`;
+        ctx.fillText(record.className, center, classY);
+      }
+
+      const award = record.achievement || fields.achievement.value || 'за достижения';
+      ctx.fillStyle = dark ? '#dbe4f5' : '#47536a';
+      ctx.font = `400 ${Math.max(20, w * .021)}px Arial`;
+      const lines = wrapText(award, contentWidth, portrait ? 4 : 3);
+      const lineHeight = Math.max(29, w * .029);
+      lines.forEach((line, i) => ctx.fillText(line, center, awardY + i * lineHeight));
+
+      ctx.strokeStyle = dark ? 'rgba(255,255,255,.55)' : '#7c8491';
+      ctx.lineWidth = 1;
+      ctx.textAlign = 'left';
+      ctx.beginPath(); ctx.moveTo(w * .135, footerY); ctx.lineTo(w * .35, footerY); ctx.stroke();
+      ctx.fillStyle = dark ? '#c8d2e4' : '#697386';
+      ctx.font = `400 ${Math.max(14, w * .014)}px Arial`;
+      ctx.fillText(fields.signature.value || 'Руководитель / подпись', w * .135, footerY + h * .035);
+
+      ctx.textAlign = 'right';
+      ctx.beginPath(); ctx.moveTo(w * .65, footerY); ctx.lineTo(w * .865, footerY); ctx.stroke();
+      ctx.fillText(fields.date.value || 'Дата', w * .865, footerY + h * .035);
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = accent;
+      ctx.beginPath(); ctx.arc(center, footerY, Math.max(30, w * .04), 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = dark ? '#15284c' : '#fffdf8';
+      ctx.font = `700 ${Math.max(19, w * .022)}px Georgia, serif`;
+      ctx.fillText('★', center, footerY + w * .008);
+
+      updatePreview();
+    }
+
+    function updatePreview() {
+      const total = Math.max(1, state.students.length);
+      $('#pageCounter').textContent = `${state.currentIndex + 1} из ${total}`;
+      $('#previousStudent').disabled = total < 2;
+      $('#nextStudent').disabled = total < 2;
+    }
+
+    function updateSummary() {
+      const count = state.students.length || 1;
+      $('#exportCount').textContent = plural(count, 'диплом', 'диплома', 'дипломов');
+      $('#exportDescription').textContent = count === 1
+        ? currentRecord().name
+        : `${state.students[0].name} и ещё ${count - 1}`;
+    }
+
+    function setPanel(name) {
+      $$('.tab-panel').forEach(panel => panel.classList.add('hidden'));
+      $(`#${name}Panel`).classList.remove('hidden');
+      $$('.step').forEach(button => button.classList.toggle('active', button.dataset.panel === name));
+      if (name === 'export') updateSummary();
+      $('.editor').scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function selectTheme(theme) {
+      state.theme = theme;
+      $$('.template-card').forEach(button => {
+        const selected = button.dataset.theme === theme;
+        button.classList.toggle('selected', selected);
+        button.setAttribute('aria-checked', String(selected));
+      });
+      drawDiploma();
+    }
+
+    function parseLine(line, delimiter) {
+      const result = [];
+      let value = '', quoted = false;
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"' && quoted && line[i + 1] === '"') { value += '"'; i++; }
+        else if (char === '"') quoted = !quoted;
+        else if (char === delimiter && !quoted) { result.push(value.trim()); value = ''; }
+        else value += char;
+      }
+      result.push(value.trim());
+      return result;
+    }
+
+    function parseStudents(text) {
+      const lines = String(text).replace(/^\uFEFF/, '').split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+      if (!lines.length) return [];
+      const sample = lines.slice(0, 5).join('\n');
+      const counts = {
+        ';': (sample.match(/;/g) || []).length,
+        ',': (sample.match(/,/g) || []).length,
+        '\t': (sample.match(/\t/g) || []).length
+      };
+      const delimiter = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+      const rows = lines.map(line => parseLine(line, delimiter));
+      const hasHeader = /(фио|имя|фамил|name|класс|class|награж)/i.test(rows[0].join(' '));
+      let nameIndex = 0, classIndex = 1, awardIndex = 2;
+
+      if (hasHeader) {
+        const headers = rows.shift().map(x => x.toLowerCase());
+        const foundName = headers.findIndex(x => /(фио|имя|фамил|name)/.test(x));
+        const foundClass = headers.findIndex(x => /(класс|class)/.test(x));
+        const foundAward = headers.findIndex(x => /(награж|достиж|номинац|achievement|текст)/.test(x));
+        nameIndex = foundName >= 0 ? foundName : 0;
+        classIndex = foundClass;
+        awardIndex = foundAward;
+      }
+
+      return rows.map(row => ({
+        name: (row[nameIndex] || '').trim(),
+        className: classIndex >= 0 ? (row[classIndex] || '').trim() : '',
+        achievement: awardIndex >= 0 ? (row[awardIndex] || '').trim() : ''
+      })).filter(x => x.name).slice(0, 200);
+    }
+
+    function applyList(text) {
+      const students = parseStudents(text);
+      if (!students.length) {
+        toast('Не удалось найти имена. Проверьте список.');
+        return;
+      }
+      state.students = students;
+      state.currentIndex = 0;
+      refreshList();
+      drawDiploma();
+      toast(`Добавлено: ${plural(students.length, 'ученик', 'ученика', 'учеников')}`);
+    }
+
+    function refreshList() {
+      const chips = $('#studentChips');
+      chips.replaceChildren();
+      state.students.slice(0, 5).forEach(student => {
+        const chip = document.createElement('span');
+        chip.className = 'student-chip';
+        chip.textContent = student.className ? `${student.name} · ${student.className}` : student.name;
+        chips.append(chip);
+      });
+      if (state.students.length > 5) {
+        const more = document.createElement('span');
+        more.className = 'student-chip';
+        more.textContent = `+ ещё ${state.students.length - 5}`;
+        chips.append(more);
+      }
+      $('#studentCount').textContent = plural(state.students.length, 'ученик', 'ученика', 'учеников');
+      $('#listResult').classList.toggle('hidden', state.students.length <= 1);
+      updateSummary();
+    }
+
+    function loadImage(file, target) {
+      if (!file || !/^image\/(png|jpeg|webp)$/.test(file.type)) {
+        toast('Поддерживаются PNG, JPG и WebP.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const image = new Image();
+        image.onload = () => {
+          state[target] = image;
+          $('#removeAssets').classList.remove('hidden');
+          drawDiploma();
+          toast('Изображение добавлено');
+        };
+        image.onerror = () => toast('Не удалось прочитать изображение.');
+        image.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function downloadBlob(blob, name) {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = name;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    }
+
+    function canvasBlob(type = 'image/png', quality) {
+      return new Promise((resolve, reject) => {
+        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Не удалось создать файл')), type, quality);
+      });
+    }
+
+    function setProgress(current, total, title) {
+      $('#progressTitle').textContent = title;
+      $('#progressText').textContent = `${current} из ${total}`;
+      $('#progressBar').style.width = `${total ? current / total * 100 : 0}%`;
+    }
+
+    async function renderAll(type, quality, title) {
+      const original = state.currentIndex;
+      const files = [];
+      const names = new Map();
+      $('#progressOverlay').classList.remove('hidden');
+      setProgress(0, state.students.length, title);
+
+      try {
+        for (let i = 0; i < state.students.length; i++) {
+          drawDiploma(state.students[i]);
+          const blob = await canvasBlob(type, quality);
+          const base = safeFileName(state.students[i].name);
+          const repeat = names.get(base) || 0;
+          names.set(base, repeat + 1);
+          files.push({
+            name: repeat ? `${base} (${repeat + 1})` : base,
+            bytes: new Uint8Array(await blob.arrayBuffer())
+          });
+          setProgress(i + 1, state.students.length, title);
+          await new Promise(resolve => setTimeout(resolve, 0));
+        }
+      } finally {
+        state.currentIndex = original;
+        drawDiploma();
+      }
+      return files;
+    }
+
+    function crc32(bytes) {
+      let crc = -1;
+      for (const byte of bytes) {
+        crc ^= byte;
+        for (let i = 0; i < 8; i++) crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
+      }
+      return (crc ^ -1) >>> 0;
+    }
+
+    function concatBytes(parts) {
+      const result = new Uint8Array(parts.reduce((sum, part) => sum + part.length, 0));
+      let offset = 0;
+      for (const part of parts) { result.set(part, offset); offset += part.length; }
+      return result;
+    }
+
+    function makeZip(files) {
+      const encoder = new TextEncoder();
+      const localParts = [], centralParts = [];
+      let offset = 0;
+
+      for (const file of files) {
+        const name = encoder.encode(`${file.name}.png`);
+        const crc = crc32(file.bytes);
+        const local = new Uint8Array(30 + name.length);
+        const lv = new DataView(local.buffer);
+        lv.setUint32(0, 0x04034b50, true);
+        lv.setUint16(4, 20, true);
+        lv.setUint16(6, 0x0800, true);
+        lv.setUint32(14, crc, true);
+        lv.setUint32(18, file.bytes.length, true);
+        lv.setUint32(22, file.bytes.length, true);
+        lv.setUint16(26, name.length, true);
+        local.set(name, 30);
+        localParts.push(local, file.bytes);
+
+        const central = new Uint8Array(46 + name.length);
+        const cv = new DataView(central.buffer);
+        cv.setUint32(0, 0x02014b50, true);
+        cv.setUint16(4, 20, true);
+        cv.setUint16(6, 20, true);
+        cv.setUint16(8, 0x0800, true);
+        cv.setUint32(16, crc, true);
+        cv.setUint32(20, file.bytes.length, true);
+        cv.setUint32(24, file.bytes.length, true);
+        cv.setUint16(28, name.length, true);
+        cv.setUint32(42, offset, true);
+        central.set(name, 46);
+        centralParts.push(central);
+        offset += local.length + file.bytes.length;
+      }
+
+      const central = concatBytes(centralParts);
+      const end = new Uint8Array(22);
+      const ev = new DataView(end.buffer);
+      ev.setUint32(0, 0x06054b50, true);
+      ev.setUint16(8, files.length, true);
+      ev.setUint16(10, files.length, true);
+      ev.setUint32(12, central.length, true);
+      ev.setUint32(16, offset, true);
+      return new Blob([...localParts, central, end], { type: 'application/zip' });
+    }
+
+    function ascii(text) { return new TextEncoder().encode(text); }
+
+    function makePdf(files) {
+      const portrait = fields.orientation.value === 'portrait';
+      const pageW = portrait ? 595 : 842;
+      const pageH = portrait ? 842 : 595;
+      const parts = [];
+      const offsets = [0];
+      let length = 0;
+      const add = bytes => { parts.push(bytes); length += bytes.length; };
+      const text = value => add(ascii(value));
+
+      text('%PDF-1.4\n%offline\n');
+      const maxObject = 2 + files.length * 3;
+      const start = number => { offsets[number] = length; text(`${number} 0 obj\n`); };
+
+      start(1); text('<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+      const kids = files.map((_, i) => `${3 + i * 3} 0 R`).join(' ');
+      start(2); text(`<< /Type /Pages /Count ${files.length} /Kids [${kids}] >>\nendobj\n`);
+
+      files.forEach((file, index) => {
+        const page = 3 + index * 3, content = page + 1, image = page + 2;
+        start(page);
+        text(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] /Resources << /XObject << /Im0 ${image} 0 R >> >> /Contents ${content} 0 R >>\nendobj\n`);
+
+        const stream = `q\n${pageW} 0 0 ${pageH} 0 0 cm\n/Im0 Do\nQ\n`;
+        start(content);
+        text(`<< /Length ${ascii(stream).length} >>\nstream\n${stream}endstream\nendobj\n`);
+
+        start(image);
+        text(`<< /Type /XObject /Subtype /Image /Width ${canvas.width} /Height ${canvas.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${file.bytes.length} >>\nstream\n`);
+        add(file.bytes);
+        text('\nendstream\nendobj\n');
+      });
+
+      const xref = length;
+      text(`xref\n0 ${maxObject + 1}\n0000000000 65535 f \n`);
+      for (let i = 1; i <= maxObject; i++) text(`${String(offsets[i]).padStart(10, '0')} 00000 n \n`);
+      text(`trailer\n<< /Size ${maxObject + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
+      return new Blob(parts, { type: 'application/pdf' });
+    }
+
+    async function downloadPng() {
+      try {
+        drawDiploma();
+        const blob = await canvasBlob();
+        downloadBlob(blob, `${safeFileName(currentRecord().name)}.png`);
+        toast('PNG готов');
+      } catch (error) { toast(error.message); }
+    }
+
+    async function downloadZip() {
+      try {
+        const files = await renderAll('image/png', undefined, 'Собираем ZIP…');
+        downloadBlob(makeZip(files), 'Дипломы.zip');
+        toast('Архив готов');
+      } catch (error) { toast(error.message || 'Не удалось создать ZIP.'); }
+      finally { $('#progressOverlay').classList.add('hidden'); }
+    }
+
+    async function downloadPdf() {
+      try {
+        const files = await renderAll('image/jpeg', .96, 'Собираем PDF…');
+        downloadBlob(makePdf(files), 'Дипломы.pdf');
+        toast('PDF готов');
+      } catch (error) { toast(error.message || 'Не удалось создать PDF.'); }
+      finally { $('#progressOverlay').classList.add('hidden'); }
+    }
+
+    function reset() {
+      Object.entries(defaults).forEach(([key, value]) => { fields[key].value = value; });
+      state = {
+        theme: 'classic',
+        zoom: 72,
+        students: [{ name: defaults.name, className: defaults.className, achievement: '' }],
+        currentIndex: 0,
+        background: null,
+        logo: null
+      };
+      $('#nameList').value = '';
+      $('#backgroundUpload').value = '';
+      $('#logoUpload').value = '';
+      $('#removeAssets').classList.add('hidden');
+      $('#listResult').classList.add('hidden');
+      selectTheme('classic');
+      applyZoom();
+      setPanel('design');
+      updateSummary();
+      toast('Данные очищены');
+    }
+
+    function applyZoom() {
+      canvas.style.width = `${state.zoom}%`;
+      $('#zoomLabel').textContent = `${state.zoom}%`;
+    }
+
+    $$('.step').forEach(button => button.addEventListener('click', () => setPanel(button.dataset.panel)));
+    $$('[data-go]').forEach(button => button.addEventListener('click', () => setPanel(button.dataset.go)));
+    $$('.template-card').forEach(button => button.addEventListener('click', () => selectTheme(button.dataset.theme)));
+
+    Object.values(fields).forEach(input => input.addEventListener('input', drawDiploma));
+    fields.name.addEventListener('input', () => {
+      if (state.students.length === 1) state.students[0].name = fields.name.value.trim();
+      updateSummary();
+      drawDiploma();
+    });
+    fields.className.addEventListener('input', () => {
+      if (state.students.length === 1) state.students[0].className = fields.className.value.trim();
+      drawDiploma();
+    });
+    fields.orientation.addEventListener('change', () => { drawDiploma(); applyZoom(); });
+
+    $('#zoomOut').addEventListener('click', () => { state.zoom = Math.max(36, state.zoom - 8); applyZoom(); });
+    $('#zoomIn').addEventListener('click', () => { state.zoom = Math.min(108, state.zoom + 8); applyZoom(); });
+    $('#previousStudent').addEventListener('click', () => {
+      state.currentIndex = (state.currentIndex - 1 + state.students.length) % state.students.length;
+      drawDiploma();
+    });
+    $('#nextStudent').addEventListener('click', () => {
+      state.currentIndex = (state.currentIndex + 1) % state.students.length;
+      drawDiploma();
+    });
+
+    $('#surpriseDesign').addEventListener('click', () => {
+      const themes = ['classic', 'bright', 'nature', 'space'];
+      const accents = ['#b9882d', '#d55a3b', '#4d7c62', '#c7a24a', '#3066b5'];
+      selectTheme(themes[Math.floor(Math.random() * themes.length)]);
+      fields.accent.value = accents[Math.floor(Math.random() * accents.length)];
+      drawDiploma();
+      toast('Создан новый вариант оформления');
+    });
+
+    $('#backgroundUpload').addEventListener('change', event => loadImage(event.target.files[0], 'background'));
+    $('#logoUpload').addEventListener('change', event => loadImage(event.target.files[0], 'logo'));
+    $('#removeAssets').addEventListener('click', () => {
+      state.background = null;
+      state.logo = null;
+      $('#backgroundUpload').value = '';
+      $('#logoUpload').value = '';
+      $('#removeAssets').classList.add('hidden');
+      drawDiploma();
+    });
+
+    $('#useSingle').addEventListener('click', () => {
+      const name = fields.name.value.trim();
+      if (!name) { toast('Введите имя участника.'); return; }
+      state.students = [{ name, className: fields.className.value.trim(), achievement: '' }];
+      state.currentIndex = 0;
+      refreshList();
+      drawDiploma();
+      toast('Выбран один участник');
+    });
+
+    $('#applyList').addEventListener('click', () => applyList($('#nameList').value));
+    $('#csvUpload').addEventListener('change', async event => {
+      const file = event.target.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        $('#nameList').value = text;
+        applyList(text);
+      } catch { toast('Не удалось прочитать файл.'); }
+    });
+
+    const drop = $('#csvDrop');
+    ['dragenter', 'dragover'].forEach(type => drop.addEventListener(type, event => {
+      event.preventDefault();
+      drop.classList.add('dragging');
+    }));
+    ['dragleave', 'drop'].forEach(type => drop.addEventListener(type, event => {
+      event.preventDefault();
+      drop.classList.remove('dragging');
+    }));
+    drop.addEventListener('drop', async event => {
+      const file = event.dataTransfer.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        $('#nameList').value = text;
+        applyList(text);
+      } catch { toast('Не удалось прочитать файл.'); }
+    });
+
+    $('#downloadExample').addEventListener('click', () => {
+      const sample = '\uFEFFФИО;Класс;Награждение\r\nИванова Анна;5А;за победу в олимпиаде\r\nПетров Максим;5А;';
+      downloadBlob(new Blob([sample], { type: 'text/csv;charset=utf-8' }), 'пример-учеников.csv');
+    });
+
+    $('#downloadPng').addEventListener('click', downloadPng);
+    $('#downloadZip').addEventListener('click', downloadZip);
+    $('#downloadPdf').addEventListener('click', downloadPdf);
+    $('#clearSession').addEventListener('click', () => {
+      if (confirm('Очистить имена, загруженные изображения и настройки?')) reset();
+    });
+
+    function loadImage(file, target) {
+      if (!file || !/^image\/(png|jpeg|webp)$/.test(file.type)) {
+        toast('Поддерживаются PNG, JPG и WebP.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const image = new Image();
+        image.onload = () => {
+          state[target] = image;
+          $('#removeAssets').classList.remove('hidden');
+          drawDiploma();
+          toast('Изображение добавлено');
+        };
+        image.onerror = () => toast('Не удалось прочитать изображение.');
+        image.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    refreshList();
+    updateSummary();
+    drawDiploma();
+    applyZoom();
+  })();
+  </script>
+</body>
+</html>
